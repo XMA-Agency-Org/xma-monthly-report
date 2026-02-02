@@ -23,6 +23,7 @@ export interface ReportData {
   enabledPlatforms: Record<PlatformId, boolean>;
   platformMetrics: Record<PlatformId, PlatformMetrics>;
   deliverables: Record<DeliverableCategory, DeliverableItem[]>;
+  customDeliverables: DeliverableItem[];
   nextPlanPeriod: "1-week" | "2-week" | "3-week" | "1-month";
   nextPlanActions: string;
 }

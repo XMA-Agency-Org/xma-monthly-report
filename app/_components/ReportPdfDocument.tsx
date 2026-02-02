@@ -134,7 +134,7 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
           );
         })}
 
-        {DELIVERABLE_CATEGORIES.some((c) => data.deliverables[c.id].length > 0) && (
+        {(DELIVERABLE_CATEGORIES.some((c) => data.deliverables[c.id].length > 0) || (data.customDeliverables && data.customDeliverables.length > 0)) && (
           <>
             <Text style={styles.sectionTitle}>Deliverables</Text>
             {DELIVERABLE_CATEGORIES.filter((c) => data.deliverables[c.id].length > 0).map((category) => (
@@ -165,6 +165,34 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                 })}
               </View>
             ))}
+            {data.customDeliverables && data.customDeliverables.length > 0 && (
+              <View>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, marginTop: 8 }}>
+                  <View style={{ ...styles.deliverableDot, backgroundColor: "#3B82F6" }} />
+                  <Text style={{ fontSize: 11, fontFamily: "Helvetica-Bold" }}>Custom</Text>
+                </View>
+                {data.customDeliverables.map((item, i) => {
+                  const statusColors: Record<string, { bg: string; text: string }> = {
+                    delivered: { bg: "#DEF7EC", text: "#03543F" },
+                    "in-progress": { bg: "#FEF3C7", text: "#92400E" },
+                    pending: { bg: "#F3F4F6", text: "#4B5563" },
+                  };
+                  const badge = statusColors[item.status] ?? statusColors.pending;
+                  const statusLabel = item.status === "in-progress" ? "In Progress" : item.status === "delivered" ? "Delivered" : "Pending";
+
+                  return (
+                    <View style={styles.deliverableRow} key={i}>
+                      <View style={styles.deliverableContent}>
+                        <Text style={styles.deliverableDesc}>{item.description || `Custom #${i + 1}`}</Text>
+                        <Text style={{ ...styles.statusBadge, backgroundColor: badge.bg, color: badge.text }}>
+                          {statusLabel}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </>
         )}
 

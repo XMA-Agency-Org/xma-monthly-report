@@ -12,6 +12,7 @@ export default function ReportCard({ clientId, report }: ReportCardProps) {
     ? new Date(report.reportData.reportDate).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
+        day: "numeric",
       })
     : "No date";
 
@@ -20,6 +21,14 @@ export default function ReportCard({ clientId, report }: ReportCardProps) {
     month: "short",
     day: "numeric",
   });
+
+  const preparedBy = report.reportData?.preparedBy;
+
+  const enabledPlatforms = report.reportData?.enabledPlatforms
+    ? Object.entries(report.reportData.enabledPlatforms)
+        .filter(([, enabled]) => enabled)
+        .map(([id]) => id === "google" ? "Google Ads" : "Meta")
+    : [];
 
   return (
     <a
@@ -30,9 +39,13 @@ export default function ReportCard({ clientId, report }: ReportCardProps) {
         <span className="text-sm font-medium text-foreground">
           {reportDate}
         </span>
-        <span className="text-xs text-muted">
-          Updated {updatedAt}
-        </span>
+        <div className="flex items-center gap-2 text-xs text-muted">
+          {preparedBy && <span>by {preparedBy}</span>}
+          {preparedBy && enabledPlatforms.length > 0 && <span>·</span>}
+          {enabledPlatforms.length > 0 && <span>{enabledPlatforms.join(", ")}</span>}
+          {(preparedBy || enabledPlatforms.length > 0) && <span>·</span>}
+          <span>Updated {updatedAt}</span>
+        </div>
       </div>
       <svg
         width="16"

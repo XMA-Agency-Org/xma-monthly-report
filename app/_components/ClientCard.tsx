@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ClientRecord } from "../_lib/api";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 interface ClientCardProps {
   client: ClientRecord;
@@ -16,7 +17,7 @@ export default function ClientCard({ client, onUpdate, onDelete }: ClientCardPro
   const [editName, setEditName] = useState(client.name);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   async function handleSave() {
     if (!editName.trim() || editName.trim() === client.name) {
@@ -34,6 +35,7 @@ export default function ClientCard({ client, onUpdate, onDelete }: ClientCardPro
     setDeleting(true);
     await onDelete(client.id);
     setDeleting(false);
+    setShowDeleteDialog(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -45,96 +47,79 @@ export default function ClientCard({ client, onUpdate, onDelete }: ClientCardPro
   }
 
   return (
-    <div className="group flex items-center gap-3 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-hover hover:bg-surface-hover">
-      {editing ? (
-        <div className="flex flex-1 items-center gap-2">
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            inputSize="sm"
-            autoFocus
-            className="flex-1"
-          />
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setEditing(false);
-              setEditName(client.name);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <>
-          <a
-            href={`/clients/${client.id}`}
-            className="flex flex-1 flex-col gap-1"
-          >
-            <span className="text-sm font-medium text-foreground">
-              {client.name}
-            </span>
-            <span className="text-xs text-muted">
-              Added {new Date(client.createdAt).toLocaleDateString()}
-            </span>
-          </a>
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+    <>
+      <div className="group flex items-center gap-3 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-hover hover:bg-surface-hover">
+        {editing ? (
+          <div className="flex flex-1 items-center gap-2">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              inputSize="sm"
+              autoFocus
+              className="flex-1"
+            />
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
             <Button
               size="sm"
               variant="ghost"
-              onClick={(e) => {
-                e.preventDefault();
-                setEditing(true);
+              onClick={() => {
+                setEditing(false);
+                setEditName(client.name);
               }}
             >
-              Edit
+              Cancel
             </Button>
-            {confirmDelete ? (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-error"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDelete();
-                  }}
-                  disabled={deleting}
-                >
-                  {deleting ? "Deleting…" : "Confirm"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setConfirmDelete(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
+          </div>
+        ) : (
+          <>
+            <a
+              href={`/clients/${client.id}`}
+              className="flex flex-1 flex-col gap-1"
+            >
+              <span className="text-sm font-medium text-foreground">
+                {client.name}
+              </span>
+              <span className="text-xs text-muted">
+                Added {new Date(client.createdAt).toLocaleDateString()}
+              </span>
+            </a>
+            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setEditing(true);
+                }}
+              >
+                Edit
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 className="text-error"
                 onClick={(e) => {
                   e.preventDefault();
-                  setConfirmDelete(true);
+                  setShowDeleteDialog(true);
                 }}
               >
                 Delete
               </Button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <ConfirmDeleteDialog
+        name={client.name}
+        open={showDeleteDialog}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+        deleting={deleting}
+      />
+    </>
   );
 }

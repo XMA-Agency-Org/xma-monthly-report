@@ -4,6 +4,7 @@ import ClientInfoSection from "./ClientInfoSection";
 import PlatformSection from "./PlatformSection";
 import PlatformToggle from "./PlatformToggle";
 import DeliverablesSection from "./DeliverablesSection";
+import CustomDeliverablesSection from "./CustomDeliverablesSection";
 import NextPlanSection from "./InsightsSection";
 import { PLATFORMS, DELIVERABLE_CATEGORIES } from "../_lib/platforms";
 import type { ClientRecord } from "../_lib/api";
@@ -26,6 +27,7 @@ export function createInitialData(): ReportData {
     enabledPlatforms,
     platformMetrics,
     deliverables,
+    customDeliverables: [],
     nextPlanPeriod: "1-month",
     nextPlanActions: "",
   };
@@ -119,6 +121,12 @@ export default function MonthlyReportForm({ data, onDataChange, clients, selecte
         deliverables={data.deliverables}
         onAdd={addDeliverable}
         onRemove={removeDeliverable}
+      />
+
+      <CustomDeliverablesSection
+        items={data.customDeliverables ?? []}
+        onAdd={(item) => onDataChange({ ...data, customDeliverables: [...(data.customDeliverables ?? []), item] })}
+        onRemove={(index) => onDataChange({ ...data, customDeliverables: (data.customDeliverables ?? []).filter((_, i) => i !== index) })}
       />
 
       <NextPlanSection data={data} onChange={updateData} />

@@ -1,6 +1,7 @@
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Label from "@/components/Label";
+import DatePicker from "@/components/DatePicker";
 import type { ReportData } from "../_types/report";
 import type { ClientRecord } from "../_lib/api";
 
@@ -59,11 +60,10 @@ export default function ClientInfoSection({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="reportDate">Report Date</Label>
-          <Input
+          <DatePicker
             id="reportDate"
-            type="date"
             value={data.reportDate}
-            onChange={(e) => onChange({ reportDate: e.target.value })}
+            onChange={(val) => onChange({ reportDate: val })}
           />
         </div>
       </div>
