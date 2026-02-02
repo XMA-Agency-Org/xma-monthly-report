@@ -24,8 +24,7 @@ function createInitialData(): ReportData {
 
   return {
     clientName: "",
-    reportMonth: "",
-    reportYear: "",
+    reportDate: "",
     preparedBy: "",
     enabledPlatforms,
     platformMetrics,
@@ -81,7 +80,7 @@ export default function MonthlyReportForm() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const fileName = `${data.clientName || "Client"}_Report_${data.reportMonth}_${data.reportYear}.pdf`;
+      const fileName = `${data.clientName || "Client"}_Report_${data.reportDate || "undated"}.pdf`;
       link.download = fileName.replace(/\s+/g, "_");
       document.body.appendChild(link);
       link.click();

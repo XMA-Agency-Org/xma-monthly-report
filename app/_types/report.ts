@@ -18,8 +18,7 @@ export type DeliverableCategory = "graphics" | "videos" | "websiteFeatures";
 
 export interface ReportData {
   clientName: string;
-  reportMonth: string;
-  reportYear: string;
+  reportDate: string;
   preparedBy: string;
   enabledPlatforms: Record<PlatformId, boolean>;
   platformMetrics: Record<PlatformId, PlatformMetrics>;

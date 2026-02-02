@@ -21,12 +21,6 @@ export const PLATFORMS: PlatformConfig[] = [
   { id: "meta", name: "Meta", color: "oklch(0.6 0.18 260)", pdfColor: "#1877F2" },
 ];
 
-export const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-export const YEARS = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i));
 
 export interface DeliverableCategoryConfig {
   id: DeliverableCategory;

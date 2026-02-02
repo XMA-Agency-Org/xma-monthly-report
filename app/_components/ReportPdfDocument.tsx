@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, Svg, G, Path, Polygon, StyleSheet } from "@react-pdf/renderer";
 import type { ReportData, PlatformId } from "../_types/report";
 import { PLATFORMS, DELIVERABLE_CATEGORIES, NEXT_PLAN_PERIODS, computeCpa } from "../_lib/platforms";
 
@@ -6,7 +6,7 @@ const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: "Helvetica", fontSize: 10, color: "#1a1a1a" },
   header: { marginBottom: 24 },
   brandRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  brandName: { fontSize: 22, fontFamily: "Helvetica-Bold", color: "#0d0d0d" },
+  brandLogo: { width: 32, height: 32, borderRadius: 4 },
   reportLabel: { fontSize: 10, color: "#666" },
   divider: { height: 2, backgroundColor: "#0d0d0d", marginBottom: 16 },
   thinDivider: { height: 1, backgroundColor: "#e0e0e0", marginVertical: 12 },
@@ -67,13 +67,23 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
-            <Text style={styles.brandName}>XMA</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Image src="/icon.png" style={styles.brandLogo} />
+              <Svg viewBox="0 0 126.4 38.4" style={{ width: 80, height: 24 }}>
+                <G>
+                  <Polygon fill="#010101" points="34.67,4.48 26.32,4.48 2.7,33.92 11.05,33.92 18.69,24.4 26.32,33.92 34.67,33.92 22.86,19.2" />
+                  <Path fill="#010101" d="M73.96,4.71c-0.18,0.1-0.35,0.2-0.49,0.35L60.25,14.6L47,5.08v0c-0.34-0.37-0.82-0.61-1.36-0.61h-4.8v29.44h6.66V13.55l12.65,9.09c0.06,0.04,0.14,0.04,0.19,0l12.61-9.09v20.38h6.66V4.48h-4.8C74.5,4.48,74.22,4.58,73.96,4.71" />
+                  <Path fill="#010101" d="M5.91,8.5l7.11,9.16l4.3-5.18l-1.84-2.35l-3.54-4.55c-0.07-0.08-0.15-0.15-0.23-0.23l-0.69-0.88H9.63H5.77H2.7L5.91,8.5L5.91,8.5z" />
+                  <Path fill="#010101" d="M122.63,31.93c-0.03-0.08-0.08-0.15-0.12-0.22l-4.1-7.57l-0.01,0.01l-5.8-10.7l-0.01-0.02l-4.26-7.85c-0.01-0.01-0.01-0.01-0.02-0.02l-0.59-1.09h-1.67h-0.03h-3.83h-0.03h-1.76l-1.86,3.59L85.83,31.52c-0.11,0.14-0.18,0.29-0.24,0.44l-1.06,1.96h2.45h3.86h1.71l3.46-6.39l8.1-14.95l10.97,20.23c0,0,0,0,0,0l0.6,1.1h1.71h3.86h2.46L122.63,31.93z" />
+                </G>
+              </Svg>
+            </View>
             <Text style={styles.reportLabel}>Monthly Performance Report</Text>
           </View>
           <View style={styles.divider} />
           <Text style={styles.clientText}>{data.clientName || "Client"}</Text>
           <Text style={styles.periodText}>
-            {data.reportMonth} {data.reportYear} {data.preparedBy ? `• Prepared by ${data.preparedBy}` : ""}
+            {data.reportDate ? new Date(data.reportDate + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : ""}{data.preparedBy ? ` • Prepared by ${data.preparedBy}` : ""}
           </Text>
         </View>
 
