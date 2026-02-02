@@ -78,7 +78,7 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                 </G>
               </Svg>
             </View>
-            <Text style={styles.reportLabel}>Monthly Performance Report</Text>
+            <Text style={styles.reportLabel}>Performance Report</Text>
           </View>
           <View style={styles.divider} />
           <Text style={styles.clientText}>{data.clientName || "Client"}</Text>
