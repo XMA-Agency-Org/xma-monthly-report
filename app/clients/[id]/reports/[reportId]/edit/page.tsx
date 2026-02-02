@@ -2,11 +2,13 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { fetchClients, fetchReport, updateReport, type ClientRecord, type ReportRecord } from "@/app/_lib/api";
+import { useClients } from "@/app/_providers/ClientsProvider";
+import { useReport, useUpdateReport } from "@/app/_lib/queries";
 import { generatePdf } from "@/app/_lib/generatePdf";
 import MonthlyReportForm from "@/app/_components/MonthlyReportForm";
-import StickyActionBar from "@/app/_components/StickyActionBar";
 import Button from "@/components/Button";
+import Link from "@/components/Link";
+import Skeleton from "@/components/Skeleton";
 import type { ReportData } from "@/app/_types/report";
 
 export default function EditReportPage({
@@ -16,27 +18,18 @@ export default function EditReportPage({
 }) {
   const { id: clientId, reportId } = use(params);
   const router = useRouter();
-  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const { clients } = useClients();
+  const { data: report, isLoading: loadingReport } = useReport(reportId);
+  const updateReportMutation = useUpdateReport();
   const [selectedClientId, setSelectedClientId] = useState(clientId);
-  const [report, setReport] = useState<ReportRecord | null>(null);
   const [data, setData] = useState<ReportData | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      const [allClients, reportData] = await Promise.all([
-        fetchClients(),
-        fetchReport(reportId),
-      ]);
-      setClients(allClients);
-      setReport(reportData);
-      setData(reportData.reportData);
-      setSelectedClientId(reportData.clientId);
-      setLoading(false);
+    if (report && !data) {
+      setData(report.reportData);
+      setSelectedClientId(report.clientId);
     }
-    load();
-  }, [reportId]);
+  }, [report, data]);
 
   function handleClientChange(newClientId: string) {
     setSelectedClientId(newClientId);
@@ -48,62 +41,56 @@ export default function EditReportPage({
 
   async function handleSave() {
     if (!data) return;
-    setSaving(true);
-    try {
-      await updateReport(reportId, data);
-      router.push(`/clients/${clientId}/reports/${reportId}`);
-    } catch {
-      setSaving(false);
-    }
+    await updateReportMutation.mutateAsync({ reportId, reportData: data });
+    router.push(`/clients/${clientId}/reports/${reportId}`);
   }
 
   async function handleSaveAndGeneratePdf() {
     if (!data) return;
-    setSaving(true);
-    try {
-      await updateReport(reportId, data);
-      await generatePdf(data);
-      router.push(`/clients/${clientId}/reports/${reportId}`);
-    } catch {
-      setSaving(false);
-    }
+    await updateReportMutation.mutateAsync({ reportId, reportData: data });
+    await generatePdf(data);
+    router.push(`/clients/${clientId}/reports/${reportId}`);
   }
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
+  const saving = updateReportMutation.isPending;
 
-  if (loading || !data) {
+  if (loadingReport || !data) {
     return (
-      <main className="flex items-center justify-center py-20 text-sm text-muted">
-        Loading…
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <div className="flex flex-col gap-3">
+          <Skeleton size="lg" />
+          <Skeleton size="card" />
+          <Skeleton size="card" />
+        </div>
       </main>
     );
   }
 
   return (
     <main>
-      <StickyActionBar>
-        <div className="flex items-center gap-3">
-          <a
-            href={`/clients/${clientId}/reports/${reportId}`}
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <div className="mx-auto max-w-3xl px-6 pt-12 sm:px-8">
+        <div className="mb-2">
+          <Link href={`/clients/${clientId}/reports/${reportId}`} variant="muted" size="sm">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {selectedClient?.name ?? "Client"}
-          </a>
-          <span className="text-sm text-muted">/</span>
-          <span className="text-sm font-medium text-foreground">Edit Report</span>
+          </Link>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Update Report"}
-          </Button>
-          <Button variant="secondary" onClick={handleSaveAndGeneratePdf} disabled={saving}>
-            {saving ? "Saving…" : "Update & Generate PDF"}
-          </Button>
+
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Edit Report</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Update Report"}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleSaveAndGeneratePdf} disabled={saving}>
+              {saving ? "Saving…" : "Update & Generate PDF"}
+            </Button>
+          </div>
         </div>
-      </StickyActionBar>
+      </div>
 
       <MonthlyReportForm
         data={data}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ClientRecord } from "../_lib/api";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import Link from "@/components/Link";
 import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 interface ClientCardProps {
@@ -75,9 +76,9 @@ export default function ClientCard({ client, onUpdate, onDelete }: ClientCardPro
           </div>
         ) : (
           <>
-            <a
+            <Link
               href={`/clients/${client.id}`}
-              className="flex flex-1 flex-col gap-1"
+              className="flex flex-1 flex-col gap-1 no-underline"
             >
               <span className="text-sm font-medium text-foreground">
                 {client.name}
@@ -85,7 +86,7 @@ export default function ClientCard({ client, onUpdate, onDelete }: ClientCardPro
               <span className="text-xs text-muted">
                 Added {new Date(client.createdAt).toLocaleDateString()}
               </span>
-            </a>
+            </Link>
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <Button
                 size="sm"

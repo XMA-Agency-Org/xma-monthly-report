@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/components/Link";
 import type { ReportListItem } from "../_lib/api";
 
 interface ReportCardProps {
@@ -31,9 +32,9 @@ export default function ReportCard({ clientId, report }: ReportCardProps) {
     : [];
 
   return (
-    <a
+    <Link
       href={`/clients/${clientId}/reports/${report.id}`}
-      className="group flex items-center justify-between rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-hover hover:bg-surface-hover"
+      className="group flex items-center justify-between rounded-lg border border-border bg-surface p-4 no-underline transition-colors hover:border-border-hover hover:bg-surface-hover"
     >
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-foreground">
@@ -62,6 +63,6 @@ export default function ReportCard({ clientId, report }: ReportCardProps) {
           strokeLinejoin="round"
         />
       </svg>
-    </a>
+    </Link>
   );
 }

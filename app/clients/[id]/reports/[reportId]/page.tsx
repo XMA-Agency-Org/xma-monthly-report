@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { fetchClient, fetchReport, deleteReport, type ClientRecord, type ReportRecord } from "@/app/_lib/api";
+import { useClients } from "@/app/_providers/ClientsProvider";
+import { useReport, useDeleteReport } from "@/app/_lib/queries";
 import { generatePdf } from "@/app/_lib/generatePdf";
 import ReportSummary from "@/app/_components/ReportSummary";
-import StickyActionBar from "@/app/_components/StickyActionBar";
 import Button from "@/components/Button";
+import Link from "@/components/Link";
+import Skeleton from "@/components/Skeleton";
 
 export default function ReportViewPage({
   params,
@@ -15,25 +17,12 @@ export default function ReportViewPage({
 }) {
   const { id: clientId, reportId } = use(params);
   const router = useRouter();
-  const [client, setClient] = useState<ClientRecord | null>(null);
-  const [report, setReport] = useState<ReportRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { getClientById, loading: clientsLoading } = useClients();
+  const client = getClientById(clientId);
+  const { data: report, isLoading: loadingReport } = useReport(reportId);
+  const deleteReportMutation = useDeleteReport();
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      const [clientData, reportData] = await Promise.all([
-        fetchClient(clientId),
-        fetchReport(reportId),
-      ]);
-      setClient(clientData);
-      setReport(reportData);
-      setLoading(false);
-    }
-    load();
-  }, [clientId, reportId]);
 
   async function handleGeneratePdf() {
     if (!report) return;
@@ -46,15 +35,18 @@ export default function ReportViewPage({
   }
 
   async function handleDelete() {
-    setDeleting(true);
-    await deleteReport(reportId);
+    await deleteReportMutation.mutateAsync(reportId);
     router.push(`/clients/${clientId}`);
   }
 
-  if (loading) {
+  if (clientsLoading || loadingReport) {
     return (
-      <main className="flex items-center justify-center py-20 text-sm text-muted">
-        Loading…
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <div className="flex flex-col gap-3">
+          <Skeleton size="lg" />
+          <Skeleton size="card" />
+          <Skeleton size="card" />
+        </div>
       </main>
     );
   }
@@ -63,9 +55,9 @@ export default function ReportViewPage({
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <p className="text-sm text-error">Report not found.</p>
-        <a href="/" className="mt-2 inline-block text-sm text-accent hover:text-accent-hover">
-          Back to clients
-        </a>
+        <Link href="/" variant="default" className="mt-2 inline-block">
+          Back to home
+        </Link>
       </main>
     );
   }
@@ -75,52 +67,48 @@ export default function ReportViewPage({
     : "Undated Report";
 
   return (
-    <main>
-      <StickyActionBar>
-        <div className="flex items-center gap-3">
-          <a
-            href={`/clients/${clientId}`}
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {client.name}
-          </a>
-          <span className="text-sm text-muted">/</span>
-          <span className="text-sm font-medium text-foreground">{reportDate}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <a href={`/clients/${clientId}/reports/${reportId}/edit`}>
-            <Button variant="secondary">Edit</Button>
-          </a>
-          <Button variant="secondary" onClick={handleGeneratePdf} disabled={generatingPdf}>
+    <main className="mx-auto max-w-3xl px-6 py-12 sm:px-8">
+      <div className="mb-2">
+        <Link href={`/clients/${clientId}`} variant="muted" size="sm">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {client.name}
+        </Link>
+      </div>
+
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-foreground">{reportDate}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/clients/${clientId}/reports/${reportId}/edit`} className="no-underline">
+            <Button variant="secondary" size="sm">Edit</Button>
+          </Link>
+          <Button variant="secondary" size="sm" onClick={handleGeneratePdf} disabled={generatingPdf}>
             {generatingPdf ? "Generating…" : "Generate PDF"}
           </Button>
           {confirmDelete ? (
             <>
               <Button
+                size="sm"
                 className="bg-error text-background hover:bg-error/80"
                 onClick={handleDelete}
-                disabled={deleting}
+                disabled={deleteReportMutation.isPending}
               >
-                {deleting ? "Deleting…" : "Confirm Delete"}
+                {deleteReportMutation.isPending ? "Deleting…" : "Confirm Delete"}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
                 Cancel
               </Button>
             </>
           ) : (
-            <Button variant="ghost" className="text-error" onClick={() => setConfirmDelete(true)}>
+            <Button variant="ghost" size="sm" className="text-error" onClick={() => setConfirmDelete(true)}>
               Delete
             </Button>
           )}
         </div>
-      </StickyActionBar>
-
-      <div className="mx-auto max-w-3xl p-6 sm:p-8">
-        <ReportSummary data={report.reportData} />
       </div>
+
+      <ReportSummary data={report.reportData} />
     </main>
   );
 }

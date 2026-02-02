@@ -1,30 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchClients, createReport, type ClientRecord } from "@/app/_lib/api";
+import { useClients } from "@/app/_providers/ClientsProvider";
+import { useCreateReport } from "@/app/_lib/queries";
 import { generatePdf } from "@/app/_lib/generatePdf";
 import MonthlyReportForm, { createInitialData } from "@/app/_components/MonthlyReportForm";
-import StickyActionBar from "@/app/_components/StickyActionBar";
 import Button from "@/components/Button";
+import Link from "@/components/Link";
 import type { ReportData } from "@/app/_types/report";
 
 export default function GlobalNewReportPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const { clients } = useClients();
+  const createReportMutation = useCreateReport();
   const [selectedClientId, setSelectedClientId] = useState("");
   const [data, setData] = useState<ReportData>(createInitialData);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      const allClients = await fetchClients();
-      setClients(allClients);
-      setLoading(false);
-    }
-    load();
-  }, []);
 
   function handleClientChange(clientId: string) {
     setSelectedClientId(clientId);
@@ -36,62 +27,50 @@ export default function GlobalNewReportPage() {
 
   async function handleSave() {
     if (!selectedClientId) return;
-    setSaving(true);
-    try {
-      const report = await createReport(selectedClientId, data);
-      router.push(`/clients/${selectedClientId}/reports/${report.id}`);
-    } catch {
-      setSaving(false);
-    }
+    const report = await createReportMutation.mutateAsync({
+      clientId: selectedClientId,
+      reportData: data,
+    });
+    router.push(`/clients/${selectedClientId}/reports/${report.id}`);
   }
 
   async function handleSaveAndGeneratePdf() {
     if (!selectedClientId) return;
-    setSaving(true);
-    try {
-      const report = await createReport(selectedClientId, data);
-      await generatePdf(data);
-      router.push(`/clients/${selectedClientId}/reports/${report.id}`);
-    } catch {
-      setSaving(false);
-    }
+    const report = await createReportMutation.mutateAsync({
+      clientId: selectedClientId,
+      reportData: data,
+    });
+    await generatePdf(data);
+    router.push(`/clients/${selectedClientId}/reports/${report.id}`);
   }
 
+  const saving = createReportMutation.isPending;
   const canSave = !!selectedClientId && !saving;
-
-  if (loading) {
-    return (
-      <main className="flex items-center justify-center py-20 text-sm text-muted">
-        Loading…
-      </main>
-    );
-  }
 
   return (
     <main>
-      <StickyActionBar>
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <div className="mx-auto max-w-3xl px-6 pt-12 sm:px-8">
+        <div className="mb-2">
+          <Link href="/" variant="muted" size="sm">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Clients
-          </a>
-          <span className="text-sm text-muted">/</span>
-          <span className="text-sm font-medium text-foreground">New Report</span>
+          </Link>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSave} disabled={!canSave}>
-            {saving ? "Saving…" : "Save Report"}
-          </Button>
-          <Button variant="secondary" onClick={handleSaveAndGeneratePdf} disabled={!canSave}>
-            {saving ? "Saving…" : "Save & Generate PDF"}
-          </Button>
+
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">New Report</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={handleSave} disabled={!canSave}>
+              {saving ? "Saving…" : "Save Report"}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleSaveAndGeneratePdf} disabled={!canSave}>
+              {saving ? "Saving…" : "Save & Generate PDF"}
+            </Button>
+          </div>
         </div>
-      </StickyActionBar>
+      </div>
 
       <MonthlyReportForm
         data={data}
