@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --background: oklch(0.13 0.005 260);
+  --foreground: oklch(0.93 0.005 260);
+  --surface: oklch(0.18 0.005 260);
+  --surface-hover: oklch(0.22 0.005 260);
+  --border: oklch(0.28 0.005 260);
+  --border-hover: oklch(0.38 0.005 260);
+  --muted: oklch(0.55 0.005 260);
+  --accent: oklch(0.65 0.1 220);
+  --accent-hover: oklch(0.72 0.1 220);
+  --accent-muted: oklch(0.35 0.06 220);
+  --success: oklch(0.7 0.15 155);
+  --warning: oklch(0.75 0.15 75);
+  --error: oklch(0.65 0.2 25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
