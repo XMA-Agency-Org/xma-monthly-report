@@ -8,9 +8,9 @@ import CustomDeliverablesSection from "./CustomDeliverablesSection";
 import NextPlanSection from "./InsightsSection";
 import { PLATFORMS, DELIVERABLE_CATEGORIES } from "../_lib/platforms";
 import type { ClientRecord } from "../_lib/api";
-import type { ReportData, PlatformId, PlatformMetrics, DeliverableCategory, DeliverableItem } from "../_types/report";
+import type { ReportData, PlatformId, CampaignType, PlatformMetrics, DeliverableCategory, DeliverableItem } from "../_types/report";
 
-const EMPTY_METRICS: PlatformMetrics = { adSpend: 0, conversions: 0, roas: 0, revenue: 0 };
+const EMPTY_METRICS: PlatformMetrics = { adSpend: 0, conversions: 0, roas: 0, revenue: 0, description: "" };
 
 export function createInitialData(): ReportData {
   const enabledPlatforms = Object.fromEntries(PLATFORMS.map((p) => [p.id, false])) as Record<PlatformId, boolean>;
@@ -20,11 +20,14 @@ export function createInitialData(): ReportData {
     DELIVERABLE_CATEGORIES.map((c) => [c.id, []])
   ) as Record<DeliverableCategory, DeliverableItem[]>;
 
+  const campaignTypes = Object.fromEntries(PLATFORMS.map((p) => [p.id, "sales" as CampaignType])) as Record<PlatformId, CampaignType>;
+
   return {
     clientName: "",
     reportDate: "",
     preparedBy: "",
     enabledPlatforms,
+    campaignTypes,
     platformMetrics,
     deliverables,
     customDeliverables: [],
@@ -44,6 +47,13 @@ interface MonthlyReportFormProps {
 export default function MonthlyReportForm({ data, onDataChange, clients, selectedClientId, onClientChange }: MonthlyReportFormProps) {
   function updateData(updates: Partial<ReportData>) {
     onDataChange({ ...data, ...updates });
+  }
+
+  function setCampaignType(id: PlatformId, type: CampaignType) {
+    onDataChange({
+      ...data,
+      campaignTypes: { ...(data.campaignTypes ?? {} as Record<PlatformId, CampaignType>), [id]: type },
+    });
   }
 
   function togglePlatform(id: PlatformId) {
@@ -109,6 +119,8 @@ export default function MonthlyReportForm({ data, onDataChange, clients, selecte
                 key={platform.id}
                 platformName={platform.name}
                 color={platform.color}
+                campaignType={data.campaignTypes?.[platform.id] ?? "sales"}
+                onCampaignTypeChange={(type) => setCampaignType(platform.id, type)}
                 metrics={data.platformMetrics[platform.id]}
                 onChange={(updates) => updatePlatformMetrics(platform.id, updates)}
               />

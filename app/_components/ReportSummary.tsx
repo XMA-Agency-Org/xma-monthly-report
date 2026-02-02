@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReportData, DeliverableStatus } from "../_types/report";
-import { PLATFORMS, DELIVERABLE_CATEGORIES, DELIVERABLE_STATUSES, NEXT_PLAN_PERIODS, computeCpa } from "../_lib/platforms";
+import { PLATFORMS, DELIVERABLE_CATEGORIES, DELIVERABLE_STATUSES, NEXT_PLAN_PERIODS, computeCpa, getCampaignType } from "../_lib/platforms";
 
 const STATUS_BADGE_CLASSES: Record<DeliverableStatus, string> = {
   delivered: "bg-success/15 text-success",
@@ -10,7 +10,7 @@ const STATUS_BADGE_CLASSES: Record<DeliverableStatus, string> = {
 };
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "AED" }).format(value);
 }
 
 function formatNumber(value: number) {
@@ -25,10 +25,17 @@ export default function ReportSummary({ data }: ReportSummaryProps) {
   const enabledPlatforms = PLATFORMS.filter((p) => data.enabledPlatforms[p.id]);
   const periodLabel = NEXT_PLAN_PERIODS.find((p) => p.value === data.nextPlanPeriod)?.label ?? data.nextPlanPeriod;
 
+  const salesPlatforms = enabledPlatforms.filter((p) => getCampaignType(data, p.id) === "sales");
+  const leadsPlatforms = enabledPlatforms.filter((p) => getCampaignType(data, p.id) === "leads");
+
   const totalSpend = enabledPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].adSpend, 0);
-  const totalConversions = enabledPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].conversions, 0);
-  const totalRevenue = enabledPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].revenue, 0);
-  const overallRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const totalConversions = salesPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].conversions, 0);
+  const totalLeads = leadsPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].conversions, 0);
+  const totalRevenue = salesPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].revenue, 0);
+  const salesSpend = salesPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].adSpend, 0);
+  const leadsSpend = leadsPlatforms.reduce((sum, p) => sum + data.platformMetrics[p.id].adSpend, 0);
+  const overallRoas = salesSpend > 0 ? totalRevenue / salesSpend : 0;
+  const overallCpl = computeCpa(leadsSpend, totalLeads);
 
   return (
     <div className="space-y-8">
@@ -62,25 +69,41 @@ export default function ReportSummary({ data }: ReportSummaryProps) {
               <p className="text-xs text-muted">Total Ad Spend</p>
               <p className="mt-1 text-lg font-semibold text-foreground">{formatCurrency(totalSpend)}</p>
             </div>
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <p className="text-xs text-muted">Total Conversions</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{formatNumber(totalConversions)}</p>
-            </div>
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <p className="text-xs text-muted">Total Revenue</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{formatCurrency(totalRevenue)}</p>
-            </div>
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <p className="text-xs text-muted">Overall ROAS</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{overallRoas.toFixed(2)}x</p>
-            </div>
+            {salesPlatforms.length > 0 && (
+              <>
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-xs text-muted">Conversions</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{formatNumber(totalConversions)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-xs text-muted">Revenue</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{formatCurrency(totalRevenue)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-xs text-muted">ROAS</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{overallRoas.toFixed(2)}x</p>
+                </div>
+              </>
+            )}
+            {leadsPlatforms.length > 0 && (
+              <>
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-xs text-muted">Total Leads</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{formatNumber(totalLeads)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-4">
+                  <p className="text-xs text-muted">Avg CPL</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{formatCurrency(overallCpl)}</p>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
 
-      {enabledPlatforms.length > 0 && (
+      {salesPlatforms.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">Platform Breakdown</h2>
+          <h2 className="text-lg font-semibold text-foreground">Sales Breakdown</h2>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead>
@@ -94,7 +117,7 @@ export default function ReportSummary({ data }: ReportSummaryProps) {
                 </tr>
               </thead>
               <tbody>
-                {enabledPlatforms.map((platform) => {
+                {salesPlatforms.map((platform) => {
                   const m = data.platformMetrics[platform.id];
                   return (
                     <tr key={platform.id} className="border-b border-border last:border-b-0">
@@ -103,12 +126,54 @@ export default function ReportSummary({ data }: ReportSummaryProps) {
                           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: platform.color }} />
                           <span className="font-medium text-foreground">{platform.name}</span>
                         </div>
+                        {m.description && (
+                          <p className="mt-1 text-xs text-muted whitespace-pre-wrap">{m.description}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-foreground">{formatCurrency(m.adSpend)}</td>
                       <td className="px-4 py-3 text-right text-foreground">{formatNumber(m.conversions)}</td>
                       <td className="px-4 py-3 text-right text-foreground">{formatCurrency(computeCpa(m.adSpend, m.conversions))}</td>
                       <td className="px-4 py-3 text-right text-foreground">{m.roas.toFixed(2)}x</td>
                       <td className="px-4 py-3 text-right text-foreground">{formatCurrency(m.revenue)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {leadsPlatforms.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">Leads Breakdown</h2>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">Platform</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">Ad Spend</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">Leads</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">CPL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leadsPlatforms.map((platform) => {
+                  const m = data.platformMetrics[platform.id];
+                  return (
+                    <tr key={platform.id} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: platform.color }} />
+                          <span className="font-medium text-foreground">{platform.name}</span>
+                        </div>
+                        {m.description && (
+                          <p className="mt-1 text-xs text-muted whitespace-pre-wrap">{m.description}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground">{formatCurrency(m.adSpend)}</td>
+                      <td className="px-4 py-3 text-right text-foreground">{formatNumber(m.conversions)}</td>
+                      <td className="px-4 py-3 text-right text-foreground">{formatCurrency(computeCpa(m.adSpend, m.conversions))}</td>
                     </tr>
                   );
                 })}

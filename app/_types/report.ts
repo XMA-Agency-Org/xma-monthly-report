@@ -1,10 +1,13 @@
 export type PlatformId = "google" | "meta";
 
+export type CampaignType = "sales" | "leads";
+
 export interface PlatformMetrics {
   adSpend: number;
   conversions: number;
   roas: number;
   revenue: number;
+  description: string;
 }
 
 export type DeliverableStatus = "delivered" | "in-progress" | "pending";
@@ -21,6 +24,7 @@ export interface ReportData {
   reportDate: string;
   preparedBy: string;
   enabledPlatforms: Record<PlatformId, boolean>;
+  campaignTypes?: Record<PlatformId, CampaignType>;
   platformMetrics: Record<PlatformId, PlatformMetrics>;
   deliverables: Record<DeliverableCategory, DeliverableItem[]>;
   customDeliverables: DeliverableItem[];

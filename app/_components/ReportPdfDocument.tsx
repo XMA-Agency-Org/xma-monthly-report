@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, Image, Svg, G, Path, Polygon, StyleSheet } from "@react-pdf/renderer";
-import type { ReportData, PlatformId } from "../_types/report";
-import { PLATFORMS, DELIVERABLE_CATEGORIES, NEXT_PLAN_PERIODS, computeCpa } from "../_lib/platforms";
+import type { ReportData } from "../_types/report";
+import { PLATFORMS, DELIVERABLE_CATEGORIES, NEXT_PLAN_PERIODS, computeCpa, getCampaignType } from "../_lib/platforms";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: "Helvetica", fontSize: 10, color: "#1a1a1a" },
@@ -13,10 +13,6 @@ const styles = StyleSheet.create({
   periodText: { fontSize: 12, color: "#333", marginBottom: 4 },
   clientText: { fontSize: 14, fontFamily: "Helvetica-Bold", marginBottom: 2 },
   sectionTitle: { fontSize: 14, fontFamily: "Helvetica-Bold", marginBottom: 10, marginTop: 16 },
-  summaryGrid: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  summaryCard: { flex: 1, padding: 10, backgroundColor: "#f5f5f5", borderRadius: 4 },
-  summaryLabel: { fontSize: 8, color: "#666", marginBottom: 2, textTransform: "uppercase" as const },
-  summaryValue: { fontSize: 16, fontFamily: "Helvetica-Bold" },
   tableHeader: { flexDirection: "row", backgroundColor: "#f0f0f0", padding: 6, borderRadius: 2, marginBottom: 2 },
   tableRow: { flexDirection: "row", padding: 6, borderBottomWidth: 1, borderBottomColor: "#eee" },
   cellPlatform: { flex: 2 },
@@ -37,8 +33,8 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 8, color: "#999" },
 });
 
-function formatUsd(value: number): string {
-  return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatCurrency(value: number): string {
+  return `AED ${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface ReportPdfDocumentProps {
@@ -47,8 +43,10 @@ interface ReportPdfDocumentProps {
 
 export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
   const enabledPlatforms = PLATFORMS.filter((p) => data.enabledPlatforms[p.id]);
+  const salesPlatforms = enabledPlatforms.filter((p) => getCampaignType(data, p.id) === "sales");
+  const leadsPlatforms = enabledPlatforms.filter((p) => getCampaignType(data, p.id) === "leads");
 
-  const totals = enabledPlatforms.reduce(
+  const salesTotals = salesPlatforms.reduce(
     (acc, p) => {
       const m = data.platformMetrics[p.id];
       acc.spend += m.adSpend;
@@ -59,8 +57,19 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
     { spend: 0, conversions: 0, revenue: 0 }
   );
 
-  const overallCpa = computeCpa(totals.spend, totals.conversions);
-  const overallRoas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
+  const leadsTotals = leadsPlatforms.reduce(
+    (acc, p) => {
+      const m = data.platformMetrics[p.id];
+      acc.spend += m.adSpend;
+      acc.leads += m.conversions;
+      return acc;
+    },
+    { spend: 0, leads: 0 }
+  );
+
+  const overallCpa = computeCpa(salesTotals.spend, salesTotals.conversions);
+  const overallRoas = salesTotals.spend > 0 ? salesTotals.revenue / salesTotals.spend : 0;
+  const overallCpl = computeCpa(leadsTotals.spend, leadsTotals.leads);
 
   return (
     <Document>
@@ -87,52 +96,95 @@ export default function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Executive Summary</Text>
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Ad Spend</Text>
-            <Text style={styles.summaryValue}>{formatUsd(totals.spend)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Conversions</Text>
-            <Text style={styles.summaryValue}>{totals.conversions.toLocaleString()}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Overall CPA</Text>
-            <Text style={styles.summaryValue}>{formatUsd(overallCpa)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Overall ROAS</Text>
-            <Text style={styles.summaryValue}>{overallRoas.toFixed(2)}x</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Platform Breakdown</Text>
-        <View style={styles.tableHeader}>
-          <View style={styles.cellPlatform}><Text style={styles.headerText}>Platform</Text></View>
-          <View style={styles.cellMetric}><Text style={styles.headerText}>Ad Spend</Text></View>
-          <View style={styles.cellMetric}><Text style={styles.headerText}>Conversions</Text></View>
-          <View style={styles.cellMetric}><Text style={styles.headerText}>CPA</Text></View>
-          <View style={styles.cellMetric}><Text style={styles.headerText}>ROAS</Text></View>
-          <View style={styles.cellMetric}><Text style={styles.headerText}>Revenue</Text></View>
-        </View>
-        {enabledPlatforms.map((p) => {
-          const m = data.platformMetrics[p.id];
-          const cpa = computeCpa(m.adSpend, m.conversions);
-          return (
-            <View style={styles.tableRow} key={p.id}>
-              <View style={{ ...styles.cellPlatform, ...styles.platformRow }}>
-                <View style={{ ...styles.platformDot, backgroundColor: p.pdfColor }} />
-                <Text style={styles.cellText}>{p.name}</Text>
-              </View>
-              <View style={styles.cellMetric}><Text style={styles.cellText}>{formatUsd(m.adSpend)}</Text></View>
-              <View style={styles.cellMetric}><Text style={styles.cellText}>{m.conversions.toLocaleString()}</Text></View>
-              <View style={styles.cellMetric}><Text style={styles.cellText}>{formatUsd(cpa)}</Text></View>
-              <View style={styles.cellMetric}><Text style={styles.cellText}>{m.roas.toFixed(2)}x</Text></View>
-              <View style={styles.cellMetric}><Text style={styles.cellText}>{formatUsd(m.revenue)}</Text></View>
+        {salesPlatforms.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Sales Breakdown</Text>
+            <View style={styles.tableHeader}>
+              <View style={styles.cellPlatform}><Text style={styles.headerText}>Platform</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>Ad Spend</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>Conversions</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>CPA</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>ROAS</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>Revenue</Text></View>
             </View>
-          );
-        })}
+            {salesPlatforms.map((p) => {
+              const m = data.platformMetrics[p.id];
+              const cpa = computeCpa(m.adSpend, m.conversions);
+              return (
+                <View key={p.id}>
+                  <View style={styles.tableRow}>
+                    <View style={{ ...styles.cellPlatform, ...styles.platformRow }}>
+                      <View style={{ ...styles.platformDot, backgroundColor: p.pdfColor }} />
+                      <Text style={styles.cellText}>{p.name}</Text>
+                    </View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{formatCurrency(m.adSpend)}</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{m.conversions.toLocaleString()}</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{formatCurrency(cpa)}</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{m.roas.toFixed(2)}x</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{formatCurrency(m.revenue)}</Text></View>
+                  </View>
+                  {m.description ? (
+                    <View style={{ paddingHorizontal: 6, paddingBottom: 6 }}>
+                      <Text style={{ fontSize: 8, color: "#666", lineHeight: 1.4 }}>{m.description}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+            <View style={{ flexDirection: "row", padding: 6, backgroundColor: "#f0f0f0", borderRadius: 2, marginTop: 2 }}>
+              <View style={styles.cellPlatform}>
+                <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Total</Text>
+              </View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatCurrency(salesTotals.spend)}</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{salesTotals.conversions.toLocaleString()}</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatCurrency(overallCpa)}</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{overallRoas.toFixed(2)}x</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatCurrency(salesTotals.revenue)}</Text></View>
+            </View>
+          </>
+        )}
+
+        {leadsPlatforms.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Leads Breakdown</Text>
+            <View style={styles.tableHeader}>
+              <View style={styles.cellPlatform}><Text style={styles.headerText}>Platform</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>Ad Spend</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>Leads</Text></View>
+              <View style={styles.cellMetric}><Text style={styles.headerText}>CPL</Text></View>
+            </View>
+            {leadsPlatforms.map((p) => {
+              const m = data.platformMetrics[p.id];
+              const cpl = computeCpa(m.adSpend, m.conversions);
+              return (
+                <View key={p.id}>
+                  <View style={styles.tableRow}>
+                    <View style={{ ...styles.cellPlatform, ...styles.platformRow }}>
+                      <View style={{ ...styles.platformDot, backgroundColor: p.pdfColor }} />
+                      <Text style={styles.cellText}>{p.name}</Text>
+                    </View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{formatCurrency(m.adSpend)}</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{m.conversions.toLocaleString()}</Text></View>
+                    <View style={styles.cellMetric}><Text style={styles.cellText}>{formatCurrency(cpl)}</Text></View>
+                  </View>
+                  {m.description ? (
+                    <View style={{ paddingHorizontal: 6, paddingBottom: 6 }}>
+                      <Text style={{ fontSize: 8, color: "#666", lineHeight: 1.4 }}>{m.description}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+            <View style={{ flexDirection: "row", padding: 6, backgroundColor: "#f0f0f0", borderRadius: 2, marginTop: 2 }}>
+              <View style={styles.cellPlatform}>
+                <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Total</Text>
+              </View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatCurrency(leadsTotals.spend)}</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{leadsTotals.leads.toLocaleString()}</Text></View>
+              <View style={styles.cellMetric}><Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatCurrency(overallCpl)}</Text></View>
+            </View>
+          </>
+        )}
 
         {(DELIVERABLE_CATEGORIES.some((c) => data.deliverables[c.id].length > 0) || (data.customDeliverables && data.customDeliverables.length > 0)) && (
           <>

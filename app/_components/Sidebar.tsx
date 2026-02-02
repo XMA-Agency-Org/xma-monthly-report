@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useClients } from "@/app/_providers/ClientsProvider";
 import Link from "@/components/Link";
 import Button from "@/components/Button";
@@ -12,6 +13,12 @@ export default function Sidebar() {
   const { clients, loading, addClient } = useClients();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -20,7 +27,7 @@ export default function Sidebar() {
       await addClient(newName.trim());
       setNewName("");
     } catch {
-      // error handled silently — client list stays current
+      // error handled silently
     }
     setCreating(false);
   }
@@ -29,12 +36,20 @@ export default function Sidebar() {
     if (e.key === "Enter") handleCreate();
   }
 
-  return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[--spacing-sidebar] flex-col border-r border-border bg-sidebar lg:flex">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+  const sidebarContent = (
+    <>
+      <div className="flex items-center justify-between border-b border-border px-4 py-4">
         <Link href="/" variant="nav" className="text-sm font-semibold text-foreground no-underline">
           XMA Reports
         </Link>
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="rounded p-1 text-muted hover:text-foreground lg:hidden"
+        >
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
 
       <div className="px-3 py-3">
@@ -78,6 +93,40 @@ export default function Sidebar() {
           </Button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
+        <Link href="/" variant="nav" className="text-sm font-semibold text-foreground no-underline">
+          XMA Reports
+        </Link>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="rounded p-1 text-muted hover:text-foreground"
+        >
+          <svg width="22" height="22" viewBox="0 0 16 16" fill="none">
+            <path d="M2 4H14M2 8H14M2 12H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </header>
+
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[--spacing-sidebar] flex-col border-r border-border bg-sidebar lg:flex">
+        {sidebarContent}
+      </aside>
+
+      {mobileOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-[--spacing-sidebar] flex-col border-r border-border bg-sidebar lg:hidden">
+            {sidebarContent}
+          </aside>
+        </>
+      )}
+    </>
   );
 }

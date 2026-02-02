@@ -1,4 +1,4 @@
-import type { PlatformId, DeliverableCategory, DeliverableStatus, ReportData } from "../_types/report";
+import type { PlatformId, CampaignType, DeliverableCategory, DeliverableStatus, ReportData } from "../_types/report";
 
 export type NextPlanPeriod = ReportData["nextPlanPeriod"];
 
@@ -40,6 +40,15 @@ export const DELIVERABLE_STATUSES: { value: DeliverableStatus; label: string }[]
   { value: "in-progress", label: "In Progress" },
   { value: "pending", label: "Pending" },
 ];
+
+export const CAMPAIGN_TYPES: { value: CampaignType; label: string }[] = [
+  { value: "sales", label: "Sales" },
+  { value: "leads", label: "Leads" },
+];
+
+export function getCampaignType(data: ReportData, platformId: PlatformId): CampaignType {
+  return data.campaignTypes?.[platformId] ?? "sales";
+}
 
 export function computeCpa(spend: number, conversions: number): number {
   if (conversions === 0) return 0;
